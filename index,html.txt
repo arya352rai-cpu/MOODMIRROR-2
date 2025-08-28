@@ -1,0 +1,376 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>🪞 MoodMirror — Your emotions, reflected with care</title>
+
+  <!-- Chart.js CDN (required for the dashboard) -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+  <style>
+    :root{
+      --accent1: #6a11cb;
+      --accent2: #2575fc;
+      --btn-bg: #2575fc;
+      --text: #122;
+      --card-bg: rgba(255,255,255,0.88);
+    }
+    *{box-sizing:border-box}
+    body{
+      margin:0;
+      font-family: "Segoe UI", Roboto, Arial, sans-serif;
+      background: linear-gradient(to right,#c9ffbf,#ffafbd);
+      color:var(--text);
+      transition: background .45s ease, color .25s ease;
+      -webkit-font-smoothing:antialiased;
+      -moz-osx-font-smoothing:grayscale;
+      min-height:100vh;
+      display:flex;
+      flex-direction:column;
+    }
+
+    header{
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      padding:12px 18px;
+      background: linear-gradient(90deg,var(--accent1),var(--accent2));
+      color:white;
+      position:sticky;
+      top:0;
+      z-index:30;
+      gap:12px;
+    }
+    .logo { display:flex; align-items:center; gap:10px; font-weight:800; letter-spacing:1px; text-transform:uppercase; font-size:1.05rem; }
+    .logo .icon { font-size:1.6rem; filter:drop-shadow(0 3px 8px rgba(0,0,0,0.18)); }
+    nav{ display:flex; gap:10px; align-items:center; flex-wrap:wrap; }
+    nav a{ color:white; text-decoration:none; font-weight:600; padding:6px 8px; border-radius:8px; }
+    nav a:hover{ background:rgba(255,255,255,0.08); }
+
+    .controls{ display:flex; gap:8px; align-items:center; }
+    .theme-btn, .mode-btn { background: rgba(255,255,255,0.12); color:white; border:none; padding:6px 8px; border-radius:8px; cursor:pointer; font-weight:700; }
+
+    main.wrap{ width:100%; max-width:980px; margin:20px auto; padding:0 16px; flex:1; }
+    .hero{
+      border-radius:12px;
+      overflow:hidden;
+      background-size:cover;
+      background-position:center;
+      padding:36px 24px;
+      color:white;
+      margin-bottom:16px;
+      box-shadow: 0 12px 34px rgba(10,10,30,0.08);
+    }
+    .hero h1{ margin:0 0 6px; font-size:1.7rem; }
+    .hero p{ margin:0; opacity:0.95; }
+
+    .card{ background:var(--card-bg); border-radius:12px; padding:16px; margin-bottom:14px; box-shadow: 0 6px 20px rgba(10,10,30,0.05); }
+    .grid{ display:grid; grid-template-columns: 1fr; gap:12px; }
+    @media(min-width:920px){ .grid { grid-template-columns: 1fr 420px; align-items:start; } }
+
+    textarea { width:100%; min-height:120px; border-radius:10px; padding:12px; border:1px solid rgba(30,30,80,0.06); resize:vertical; font-size:1rem; background:white; }
+    .btn{ background:var(--btn-bg); color:white; border:none; padding:10px 14px; border-radius:10px; font-weight:800; cursor:pointer; }
+    .btn:active{ transform:translateY(1px); }
+
+    .result { font-weight:800; margin-left:8px; }
+    ul.support { list-style:none; padding:0; margin:0; text-align:left; }
+    ul.support li { padding:8px 0; border-bottom:1px dashed rgba(0,0,0,0.04); }
+
+    .theme-options { display:flex; gap:8px; flex-wrap:wrap; justify-content:center; }
+    footer{ text-align:center; padding:12px 8px; font-size:0.95rem; color:rgba(0,0,0,0.6); }
+
+    /* Dark theme overrides */
+    body.dark {
+      --accent1: #041428;
+      --accent2: #003b66;
+      --btn-bg: #0b84ff;
+      --text: #e6eef8;
+      --card-bg: rgba(8,12,20,0.6);
+      background: linear-gradient(120deg,#0f1724,#0b3a4a);
+      color:var(--text);
+    }
+    body.dark footer{ color:#c8d6e5; }
+
+    /* small helpers */
+    .muted{ opacity:0.9; font-size:0.98rem; }
+    .small{ font-size:0.92rem; opacity:0.9; }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="logo" aria-hidden="false">
+      <div class="icon">🪞</div>
+      <div>
+        <div style="font-weight:900;">MoodMirror</div>
+        <div style="font-size:0.75rem; opacity:0.95; margin-top:2px;">Your emotions, reflected with care</div>
+      </div>
+    </div>
+
+    <nav>
+      <a href="#home">🏠 Home</a>
+      <a href="#mood">😊 Mood Checker</a>
+      <a href="#dashboard">📊 Dashboard</a>
+      <a href="#support">🤝 Support</a>
+      <a href="#impact">🌍 Impact</a>
+
+      <div class="controls" style="margin-left:8px;">
+        <div class="theme-options" role="toolbar" aria-label="Choose theme">
+          <button class="theme-btn" onclick="setTheme('calm')">Calm Sky 🌤</button>
+          <button class="theme-btn" onclick="setTheme('sunset')">Sunset 🌅</button>
+          <button class="theme-btn" onclick="setTheme('night')">Night 🌌</button>
+          <button class="theme-btn" onclick="setTheme('minimal')">Minimal 🎨</button>
+        </div>
+        <button id="modeBtn" class="mode-btn" title="Toggle dark/light">🌙</button>
+      </div>
+    </nav>
+  </header>
+
+  <main class="wrap">
+    <section id="home" class="hero" style="background-image:url('https://images.unsplash.com/photo-1507525428034-b723cf961d3e?auto=format&fit=crop&w=1400&q=70');">
+      <h1>🪞 Reflect Your Emotions with MoodMirror</h1>
+      <p class="muted">A private, supportive space to check in, track trends, and discover simple steps to feel better. Built for teens, presented with care.</p>
+    </section>
+
+    <div class="grid">
+      <div>
+        <div id="mood" class="card" aria-labelledby="mood-checker-title">
+          <h2 id="mood-checker-title">😊 Mood Checker</h2>
+          <p class="small muted">Write briefly about your day (1–3 sentences) — press <strong>Analyze Mood</strong>.</p>
+          <textarea id="journal" placeholder="Example: I felt anxious before my exam and had trouble sleeping..."></textarea>
+          <div style="display:flex;align-items:center;gap:12px;margin-top:10px;flex-wrap:wrap;">
+            <button class="btn" onclick="analyzeMood()" aria-label="Analyze Mood">Analyze Mood</button>
+            <div class="result" id="detectedMood">Detected Mood: —</div>
+            <div style="flex:1"></div>
+            <div class="small muted">Tip: Press <kbd>Ctrl/⌘ + Enter</kbd> to analyze quickly.</div>
+          </div>
+        </div>
+
+        <div id="support" class="card">
+          <h3>🤝 Quick Support Tips</h3>
+          <ul class="support">
+            <li>☕ Take a 2-minute breathing break.</li>
+            <li>📝 Write one sentence about something you're grateful for.</li>
+            <li>🚶 Step outside for a short walk or stretch.</li>
+            <li>🗣 Talk to a friend, parent, or teacher you trust.</li>
+            <li>🩺 If feeling persistently low, contact a counselor or helpline.</li>
+          </ul>
+        </div>
+      </div>
+
+      <aside>
+        <div id="dashboard" class="card" aria-label="Mood dashboard">
+          <h3>📊 Mood Dashboard</h3>
+          <div style="height:260px;">
+            <canvas id="moodChart" width="400" height="260" aria-hidden="false"></canvas>
+          </div>
+          <p class="small muted" style="margin-top:8px">Counts persist in this demo session. In a full app you'd see trends per day or week.</p>
+        </div>
+
+        <div class="card" style="margin-top:12px;">
+          <h3>Theme Preview</h3>
+          <div class="theme-options small">
+            <button class="theme-btn" onclick="setTheme('calm')">Calm Sky 🌤</button>
+            <button class="theme-btn" onclick="setTheme('sunset')">Sunset 🌅</button>
+            <button class="theme-btn" onclick="setTheme('night')">Night 🌌</button>
+            <button class="theme-btn" onclick="setTheme('minimal')">Minimal 🎨</button>
+          </div>
+        </div>
+      </aside>
+    </div>
+
+    <section id="impact" class="card" style="margin-top:16px;">
+      <h3>🌍 Impact & SDGs</h3>
+      <p class="muted">MoodMirror encourages early awareness of emotional changes, helps teens practice small self-care steps, and connects them to support when needed.</p>
+      <ul>
+        <li>SDG 3 — Good Health & Well-being</li>
+        <li>SDG 4 — Quality Education (healthy learners)</li>
+        <li>SDG 10 — Reduced Inequalities through accessible resources</li>
+      </ul>
+      <p class="small muted">Note: This tool is supportive and not a clinical diagnostic system. For serious concerns, seek professional help.</p>
+    </section>
+  </main>
+
+  <footer>
+    <div>© 2025 🪞 MoodMirror — Made with ❤️ by Arya Rai</div>
+  </footer>
+
+  <script>
+    // ---------- Keywords and emoji sets ----------
+    const positiveWords = ["happy","good","great","excited","joy","relaxed","calm","nice","fun","ok","better","motivated","confident","hopeful"];
+    const negativeWords = ["sad","stressed","tired","anxious","angry","depressed","lonely","worried","bad","down","overwhelmed","panic","scared","upset"];
+
+    const positiveEmojis = /[\u{1F600}-\u{1F60F}\u{1F970}\u{1F60A}\u{1F642}]/u; // simple positive emoji range
+    const negativeEmojis = /[\u{1F622}\u{1F61E}\u{1F62D}\u{1F61F}\u{1F629}]/u;
+
+    // ---------- Load / persist counts ----------
+    function loadCounts(){
+      try {
+        const s = localStorage.getItem('moodCounts');
+        return s ? JSON.parse(s) : { Positive:0, Negative:0, Neutral:0 };
+      } catch(e) {
+        return { Positive:0, Negative:0, Neutral:0 };
+      }
+    }
+    function saveCounts(counts){
+      try { localStorage.setItem('moodCounts', JSON.stringify(counts)); } catch(e){}
+    }
+    let counts = loadCounts();
+
+    // ---------- Chart initialization ----------
+    const ctx = document.getElementById('moodChart').getContext('2d');
+    const moodChart = new Chart(ctx, {
+      type: 'bar',
+      data: {
+        labels: ['Positive 😀','Negative 😔','Neutral 😐'],
+        datasets: [{
+          label: 'Session Mood Count',
+          data: [counts.Positive, counts.Negative, counts.Neutral],
+          backgroundColor: ['#4CAF50','#F44336','#FFC107']
+        }]
+      },
+      options: {
+        responsive:true,
+        maintainAspectRatio:false,
+        scales: { y: { beginAtZero:true, ticks: { precision:0 } } },
+        plugins: { legend: { display:false } }
+      }
+    });
+
+    function updateChart(mood){
+      counts[mood] = (counts[mood] || 0) + 1;
+      saveCounts(counts);
+      moodChart.data.datasets[0].data = [counts.Positive, counts.Negative, counts.Neutral];
+      moodChart.update();
+    }
+
+    // ---------- Mood analysis (robust, keyword & emoji aware) ----------
+    function analyzeMood(){
+      const raw = document.getElementById('journal').value || "";
+      const display = document.getElementById('detectedMood');
+      const text = raw.toLowerCase().replace(/[^\w\s\u{1F000}-\u{1FFFF}]/gu, ' '); // keep letters & emojis
+      if (!text.trim()){
+        display.innerText = 'Detected Mood: — (please write something)';
+        return;
+      }
+
+      // count positive/negative words (use word boundaries)
+      let score = 0;
+      for (const w of positiveWords){
+        const re = new RegExp('\\b' + w + '\\b','g');
+        const matches = text.match(re);
+        if (matches) score += matches.length;
+      }
+      for (const w of negativeWords){
+        const re = new RegExp('\\b' + w + '\\b','g');
+        const matches = text.match(re);
+        if (matches) score -= matches.length;
+      }
+
+      // emoji quick boosts
+      if (positiveEmojis.test(raw)) score += 1;
+      if (negativeEmojis.test(raw)) score -= 1;
+
+      // simple negation handling: "not happy" flips +1
+      const negationMatches = text.match(/\b(not|never|no longer|hardly|rarely)\b\s+\b(happy|good|calm|relaxed)\b/g);
+      if (negationMatches) score -= negationMatches.length * 1;
+
+      let mood = "Neutral";
+      if (score > 0) mood = "Positive";
+      else if (score < 0) mood = "Negative";
+
+      display.innerText = 'Detected Mood: ' + mood;
+      updateChart(mood);
+    }
+
+    // Allow Ctrl/⌘ + Enter to analyze
+    document.getElementById('journal').addEventListener('keydown', (e)=>{
+      if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) {
+        analyzeMood();
+      }
+    });
+
+    // ---------- Theme system ----------
+    const themes = {
+      calm: {
+        hero: "url('https://images.unsplash.com/photo-1507525428034-b723cf961d3e?auto=format&fit=crop&w=1400&q=70')",
+        body: "linear-gradient(120deg,#c9ffbf,#ffafbd)",
+        headerAccent1: "#6a11cb",
+        headerAccent2: "#2575fc",
+        cardBg: "rgba(255,255,255,0.88)",
+        text: "#122"
+      },
+      sunset: {
+        hero: "url('https://images.unsplash.com/photo-1501973801540-537f08ccae7b?auto=format&fit=crop&w=1400&q=70')",
+        body: "linear-gradient(120deg,#f6d365,#fda085)",
+        headerAccent1: "#ff7e5f",
+        headerAccent2: "#feb47b",
+        cardBg: "rgba(255,255,255,0.9)",
+        text: "#111"
+      },
+      night: {
+        hero: "url('https://images.unsplash.com/photo-1500530855697-b586d89ba3ee?auto=format&fit=crop&w=1400&q=70')",
+        body: "linear-gradient(120deg,#0f1724,#0b3a4a)",
+        headerAccent1: "#001f3f",
+        headerAccent2: "#004e92",
+        cardBg: "rgba(8,12,20,0.6)",
+        text: "#e6eef8"
+      },
+      minimal: {
+        hero: "linear-gradient(180deg,#ffffff,#f0f4f8)",
+        body: "linear-gradient(90deg,#ffffff,#f7f9fc)",
+        headerAccent1: "#7b6eff",
+        headerAccent2: "#4da6ff",
+        cardBg: "rgba(255,255,255,0.96)",
+        text: "#111827"
+      }
+    };
+
+    function setTheme(name){
+      const t = themes[name] || themes.calm;
+      document.querySelector('.hero').style.backgroundImage = t.hero;
+      document.body.style.background = t.body;
+      document.documentElement.style.setProperty('--accent1', t.headerAccent1);
+      document.documentElement.style.setProperty('--accent2', t.headerAccent2);
+      document.documentElement.style.setProperty('--card-bg', t.cardBg);
+      document.documentElement.style.setProperty('--text', t.text);
+      // if dark class is set, keep it but ensure hero is night for readability
+      if (document.body.classList.contains('dark')){
+        document.querySelector('.hero').style.backgroundImage = themes.night.hero;
+      }
+    }
+    // default theme
+    setTheme('calm');
+
+    // ---------- Dark/light toggle ----------
+    const modeBtn = document.getElementById('modeBtn');
+    modeBtn.addEventListener('click', ()=>{
+      document.body.classList.toggle('dark');
+      modeBtn.textContent = document.body.classList.contains('dark') ? '☀️' : '🌙';
+      // if toggled to dark and current theme isn't night, apply night hero for clarity
+      if (document.body.classList.contains('dark')) {
+        document.querySelector('.hero').style.backgroundImage = themes.night.hero;
+      } else {
+        setTheme('calm');
+      }
+    });
+
+    // ---------- Smooth scroll for navbar anchors ----------
+    document.querySelectorAll('nav a').forEach(a=>{
+      a.addEventListener('click', (e)=>{
+        e.preventDefault();
+        const id = a.getAttribute('href').slice(1);
+        const el = document.getElementById(id);
+        if (el) el.scrollIntoView({behavior:'smooth', block:'start'});
+      });
+    });
+
+    // Safety: if Chart.js failed to load, don't crash — show message
+    window.addEventListener('load', ()=>{
+      if (typeof Chart === 'undefined'){
+        document.getElementById('moodChart').closest('div').innerHTML = '<p style="color:#b00">Chart failed to load (network blocked). Mood counts still save but dashboard unavailable.</p>';
+      }
+    });
+  </script>
+</body>
+</html>
